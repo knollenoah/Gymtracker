@@ -2,8 +2,9 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Gym Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -15,11 +16,15 @@ background:#0f172a;
 color:white;
 display:flex;
 justify-content:center;
-padding:20px;
 }
 
 .container{
-width:360px;
+width:380px;
+padding:20px;
+}
+
+h1{
+text-align:center;
 }
 
 .card{
@@ -29,48 +34,83 @@ border-radius:14px;
 margin-bottom:20px;
 }
 
-input,select,button{
+input,select{
 width:100%;
 padding:12px;
-margin-top:10px;
-border:none;
+margin-top:8px;
+margin-bottom:12px;
 border-radius:8px;
-font-size:16px;
-box-sizing:border-box;
+border:none;
 }
 
 button{
+width:100%;
+padding:14px;
 background:#22c55e;
+border:none;
+border-radius:10px;
 color:white;
 font-weight:bold;
+font-size:16px;
 cursor:pointer;
 }
 
-.entry{
-background:#334155;
-padding:12px;
-border-radius:10px;
+button:hover{
+background:#16a34a;
+}
+
+.historyBtn{
 margin-top:10px;
-}
-
-.deleteBtn{
-background:#ef4444;
-margin-top:8px;
-}
-
-.manageBtn{
 background:#3b82f6;
-}
-
-.pr{
-color:gold;
-font-weight:bold;
 }
 
 canvas{
 background:white;
 border-radius:10px;
-margin-top:10px;
+}
+
+.modal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+justify-content:center;
+align-items:center;
+}
+
+.modalContent{
+background:#1e293b;
+padding:20px;
+width:90%;
+max-width:400px;
+max-height:80vh;
+overflow:auto;
+border-radius:12px;
+}
+
+.entry{
+background:#334155;
+padding:12px;
+margin-bottom:10px;
+border-radius:8px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.deleteBtn{
+background:#ef4444;
+padding:6px 10px;
+border-radius:6px;
+font-size:12px;
+}
+
+.date{
+font-size:12px;
+color:#cbd5f5;
 }
 
 </style>
@@ -84,48 +124,48 @@ margin-top:10px;
 
 <div class="card">
 
-<select id="exerciseSelect">
-<option value="">Gespeicherte Übung wählen</option>
-</select>
+<label>Übung</label>
+<input id="exerciseInput" list="exerciseList">
 
-<input id="exerciseInput" placeholder="oder neue Übung eingeben">
+<datalist id="exerciseList"></datalist>
 
-<input id="weightInput" type="number" placeholder="Gewicht (kg)">
-<input id="repsInput" type="number" placeholder="Wiederholungen">
+<label>Gewicht (kg)</label>
+<input type="number" id="weightInput">
+
+<label>Wiederholungen</label>
+<input type="number" id="repsInput">
 
 <button onclick="saveEntry()">Speichern</button>
+
+<button class="historyBtn" onclick="openHistory()">Historie verwalten</button>
 
 </div>
 
 <div class="card">
 
-<select id="graphExercise">
-<option value="">Übung für Fortschritt wählen</option>
-</select>
+<label>Übung für Fortschritt wählen</label>
 
-<button onclick="showGraph()">Fortschritt anzeigen</button>
+<select id="exerciseSelect"></select>
+
+<button onclick="showProgress()">Fortschritt anzeigen</button>
+
+<br><br>
 
 <canvas id="chart"></canvas>
 
 </div>
 
-<div class="card">
-
-<h3>Letzte Einträge</h3>
-
-<div id="entries"></div>
-
-<button class="manageBtn" onclick="toggleManager()">
-Historie verwalten
-</button>
-
-<div id="manager" style="display:none;margin-top:15px;">
-
-<button class="deleteBtn" onclick="clearHistory()">
-Alle Einträge löschen
-</button>
-
 </div>
+
+<div class="modal" id="historyModal">
+
+<div class="modalContent">
+
+<h2>Trainings Historie</h2>
+
+<div id="historyList"></div>
+
+<button onclick="closeHistory()">Schließen</button>
 
 </div>
 
@@ -133,140 +173,82 @@ Alle Einträge löschen
 
 <script>
 
-let data = JSON.parse(localStorage.getItem("gymData")) || [];
+let data = JSON.parse(localStorage.getItem("gymData")) || []
 
-data = data.filter(e => e.exercise && e.weight && e.reps);
+let chart
 
-const entriesDiv = document.getElementById("entries");
-const exerciseSelect = document.getElementById("exerciseSelect");
-const graphExercise = document.getElementById("graphExercise");
-
-function saveData(){
-localStorage.setItem("gymData", JSON.stringify(data));
+function saveLocal(){
+localStorage.setItem("gymData",JSON.stringify(data))
 }
-
-function updateExerciseList(){
-
-let exercises = [...new Set(data.map(e=>e.exercise))];
-
-exerciseSelect.innerHTML='<option value="">Gespeicherte Übung wählen</option>';
-graphExercise.innerHTML='<option value="">Übung für Fortschritt wählen</option>';
-
-exercises.forEach(e=>{
-
-let o1=document.createElement("option");
-o1.value=e;
-o1.textContent=e;
-exerciseSelect.appendChild(o1);
-
-let o2=document.createElement("option");
-o2.value=e;
-o2.textContent=e;
-graphExercise.appendChild(o2);
-
-});
-
-}
-
-exerciseSelect.onchange=()=>{
-document.getElementById("exerciseInput").value=exerciseSelect.value;
-};
 
 function saveEntry(){
 
-let exercise=document.getElementById("exerciseInput").value.trim();
-let weight=document.getElementById("weightInput").value;
-let reps=document.getElementById("repsInput").value;
+let exercise=document.getElementById("exerciseInput").value
+let weight=parseFloat(document.getElementById("weightInput").value)
+let reps=parseInt(document.getElementById("repsInput").value)
 
-if(!exercise || !weight || !reps) return;
+if(!exercise||!weight||!reps)return
 
-let pr=false;
+let date=new Date()
 
-let previous=data.filter(e=>e.exercise==exercise);
-
-if(previous.length==0) pr=true;
-else{
-
-let max=Math.max(...previous.map(e=>e.weight));
-if(weight>max) pr=true;
-
-}
+let oneRM=(weight*(1+reps/30)).toFixed(1)
 
 data.push({
 exercise,
-weight:Number(weight),
-reps:Number(reps),
-date:new Date().toISOString()
-});
+weight,
+reps,
+oneRM,
+date
+})
 
-saveData();
+saveLocal()
 
-renderEntries();
+updateExerciseLists()
 
-updateExerciseList();
-
-document.getElementById("exerciseInput").value="";
-document.getElementById("weightInput").value="";
-document.getElementById("repsInput").value="";
-
-}
-
-function deleteEntry(index){
-
-data.splice(index,1);
-
-saveData();
-
-renderEntries();
-
-updateExerciseList();
+document.getElementById("exerciseInput").value=""
+document.getElementById("weightInput").value=""
+document.getElementById("repsInput").value=""
 
 }
 
-function renderEntries(){
+function updateExerciseLists(){
 
-entriesDiv.innerHTML="";
+let exercises=[...new Set(data.map(e=>e.exercise))]
 
-let recent=data.slice(-5).reverse();
+let datalist=document.getElementById("exerciseList")
+let select=document.getElementById("exerciseSelect")
 
-recent.forEach((e,i)=>{
+datalist.innerHTML=""
+select.innerHTML=""
 
-let div=document.createElement("div");
-div.className="entry";
+exercises.forEach(ex=>{
 
-let previous=data.filter(x=>x.exercise==e.exercise && x!==e);
+let option=document.createElement("option")
+option.value=ex
+datalist.appendChild(option)
 
-let prText="";
+let option2=document.createElement("option")
+option2.value=ex
+option2.textContent=ex
+select.appendChild(option2)
 
-if(previous.length==0 || e.weight>Math.max(...previous.map(x=>x.weight)))
-prText='<div class="pr">🏆 NEW PR</div>';
-
-div.innerHTML=
-`<b>${e.exercise}</b><br>
-${e.weight} kg • ${e.reps} reps
-${prText}
-<button class="deleteBtn" onclick="deleteEntry(${data.length-1-i})">
-Eintrag löschen
-</button>`;
-
-entriesDiv.appendChild(div);
-
-});
+})
 
 }
 
-let chart;
+function showProgress(){
 
-function showGraph(){
+let exercise=document.getElementById("exerciseSelect").value
 
-let exercise=graphExercise.value;
+let filtered=data.filter(e=>e.exercise===exercise)
 
-let filtered=data.filter(e=>e.exercise==exercise);
+let labels=filtered.map(e=>new Date(e.date).toLocaleDateString())
 
-let labels=filtered.map(e=>new Date(e.date).toLocaleDateString());
-let weights=filtered.map(e=>e.weight);
+let weights=filtered.map(e=>e.weight)
 
-if(chart) chart.destroy();
+let oneRM=filtered.map(e=>e.oneRM)
+
+if(chart)chart.destroy()
 
 chart=new Chart(document.getElementById("chart"),{
 
@@ -274,41 +256,80 @@ type:"line",
 
 data:{
 labels:labels,
-datasets:[{
-label:exercise+" kg",
+datasets:[
+{
+label:"Gewicht",
 data:weights,
-fill:false,
-tension:0.3
-}]
+borderWidth:3
+},
+{
+label:"1RM",
+data:oneRM,
+borderWidth:3
+}
+]
+},
+
+options:{
+responsive:true
 }
 
-});
-
-}
-
-function toggleManager(){
-
-let m=document.getElementById("manager");
-
-m.style.display = m.style.display === "none" ? "block" : "none";
-
-}
-
-function clearHistory(){
-
-if(confirm("Alle Trainingsdaten löschen?")){
-
-data=[];
-saveData();
-renderEntries();
-updateExerciseList();
+})
 
 }
 
+function openHistory(){
+
+let list=document.getElementById("historyList")
+
+list.innerHTML=""
+
+data.forEach((e,i)=>{
+
+let div=document.createElement("div")
+div.className="entry"
+
+div.innerHTML=`
+
+<div>
+
+<strong>${e.exercise}</strong><br>
+
+${e.weight}kg • ${e.reps} reps • 1RM ${e.oneRM}
+
+<div class="date">${new Date(e.date).toLocaleDateString()}</div>
+
+</div>
+
+<button class="deleteBtn" onclick="deleteEntry(${i})">X</button>
+
+`
+
+list.appendChild(div)
+
+})
+
+document.getElementById("historyModal").style.display="flex"
+
 }
 
-updateExerciseList();
-renderEntries();
+function closeHistory(){
+document.getElementById("historyModal").style.display="none"
+}
+
+function deleteEntry(i){
+
+data.splice(i,1)
+
+saveLocal()
+
+openHistory()
+
+updateExerciseLists()
+
+}
+
+updateExerciseLists()
 
 </script>
 

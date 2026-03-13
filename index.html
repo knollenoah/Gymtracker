@@ -10,7 +10,7 @@
 <style>
 
 body{
-font-family: Arial;
+font-family:Arial;
 background:#0f172a;
 color:white;
 display:flex;
@@ -19,13 +19,13 @@ padding:20px;
 }
 
 .container{
-width:350px;
+width:360px;
 }
 
 .card{
 background:#1e293b;
 padding:20px;
-border-radius:15px;
+border-radius:14px;
 margin-bottom:20px;
 }
 
@@ -36,6 +36,7 @@ margin-top:10px;
 border:none;
 border-radius:8px;
 font-size:16px;
+box-sizing:border-box;
 }
 
 button{
@@ -47,9 +48,18 @@ cursor:pointer;
 
 .entry{
 background:#334155;
-padding:10px;
+padding:12px;
 border-radius:10px;
 margin-top:10px;
+}
+
+.deleteBtn{
+background:#ef4444;
+margin-top:8px;
+}
+
+.manageBtn{
+background:#3b82f6;
 }
 
 .pr{
@@ -100,8 +110,23 @@ margin-top:10px;
 </div>
 
 <div class="card">
+
 <h3>Letzte Einträge</h3>
+
 <div id="entries"></div>
+
+<button class="manageBtn" onclick="toggleManager()">
+Historie verwalten
+</button>
+
+<div id="manager" style="display:none;margin-top:15px;">
+
+<button class="deleteBtn" onclick="clearHistory()">
+Alle Einträge löschen
+</button>
+
+</div>
+
 </div>
 
 </div>
@@ -109,6 +134,8 @@ margin-top:10px;
 <script>
 
 let data = JSON.parse(localStorage.getItem("gymData")) || [];
+
+data = data.filter(e => e.exercise && e.weight && e.reps);
 
 const entriesDiv = document.getElementById("entries");
 const exerciseSelect = document.getElementById("exerciseSelect");
@@ -147,7 +174,7 @@ document.getElementById("exerciseInput").value=exerciseSelect.value;
 
 function saveEntry(){
 
-let exercise=document.getElementById("exerciseInput").value;
+let exercise=document.getElementById("exerciseInput").value.trim();
 let weight=document.getElementById("weightInput").value;
 let reps=document.getElementById("repsInput").value;
 
@@ -184,13 +211,25 @@ document.getElementById("repsInput").value="";
 
 }
 
+function deleteEntry(index){
+
+data.splice(index,1);
+
+saveData();
+
+renderEntries();
+
+updateExerciseList();
+
+}
+
 function renderEntries(){
 
 entriesDiv.innerHTML="";
 
 let recent=data.slice(-5).reverse();
 
-recent.forEach(e=>{
+recent.forEach((e,i)=>{
 
 let div=document.createElement("div");
 div.className="entry";
@@ -205,7 +244,10 @@ prText='<div class="pr">🏆 NEW PR</div>';
 div.innerHTML=
 `<b>${e.exercise}</b><br>
 ${e.weight} kg • ${e.reps} reps
-${prText}`;
+${prText}
+<button class="deleteBtn" onclick="deleteEntry(${data.length-1-i})">
+Eintrag löschen
+</button>`;
 
 entriesDiv.appendChild(div);
 
@@ -241,6 +283,27 @@ tension:0.3
 }
 
 });
+
+}
+
+function toggleManager(){
+
+let m=document.getElementById("manager");
+
+m.style.display = m.style.display === "none" ? "block" : "none";
+
+}
+
+function clearHistory(){
+
+if(confirm("Alle Trainingsdaten löschen?")){
+
+data=[];
+saveData();
+renderEntries();
+updateExerciseList();
+
+}
 
 }
 

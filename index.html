@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Gym Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family: Arial;
+background:#0f172a;
+color:white;
+display:flex;
+justify-content:center;
+padding:20px;
+}
+
+.container{
+width:350px;
+}
+
+.card{
+background:#1e293b;
+padding:20px;
+border-radius:15px;
+margin-bottom:20px;
+}
+
+input,select,button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:8px;
+font-size:16px;
+}
+
+button{
+background:#22c55e;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.entry{
+background:#334155;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+}
+
+.pr{
+color:gold;
+font-weight:bold;
+}
+
+canvas{
+background:white;
+border-radius:10px;
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Gym Tracker</h1>
+
+<div class="card">
+
+<select id="exerciseSelect">
+<option value="">Gespeicherte Übung wählen</option>
+</select>
+
+<input id="exerciseInput" placeholder="oder neue Übung eingeben">
+
+<input id="weightInput" type="number" placeholder="Gewicht (kg)">
+<input id="repsInput" type="number" placeholder="Wiederholungen">
+
+<button onclick="saveEntry()">Speichern</button>
+
+</div>
+
+<div class="card">
+
+<select id="graphExercise">
+<option value="">Übung für Fortschritt wählen</option>
+</select>
+
+<button onclick="showGraph()">Fortschritt anzeigen</button>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<div class="card">
+<h3>Letzte Einträge</h3>
+<div id="entries"></div>
+</div>
+
+</div>
+
+<script>
+
+let data = JSON.parse(localStorage.getItem("gymData")) || [];
+
+const entriesDiv = document.getElementById("entries");
+const exerciseSelect = document.getElementById("exerciseSelect");
+const graphExercise = document.getElementById("graphExercise");
+
+function saveData(){
+localStorage.setItem("gymData", JSON.stringify(data));
+}
+
+function updateExerciseList(){
+
+let exercises = [...new Set(data.map(e=>e.exercise))];
+
+exerciseSelect.innerHTML='<option value="">Gespeicherte Übung wählen</option>';
+graphExercise.innerHTML='<option value="">Übung für Fortschritt wählen</option>';
+
+exercises.forEach(e=>{
+
+let o1=document.createElement("option");
+o1.value=e;
+o1.textContent=e;
+exerciseSelect.appendChild(o1);
+
+let o2=document.createElement("option");
+o2.value=e;
+o2.textContent=e;
+graphExercise.appendChild(o2);
+
+});
+
+}
+
+exerciseSelect.onchange=()=>{
+document.getElementById("exerciseInput").value=exerciseSelect.value;
+};
+
+function saveEntry(){
+
+let exercise=document.getElementById("exerciseInput").value;
+let weight=document.getElementById("weightInput").value;
+let reps=document.getElementById("repsInput").value;
+
+if(!exercise || !weight || !reps) return;
+
+let pr=false;
+
+let previous=data.filter(e=>e.exercise==exercise);
+
+if(previous.length==0) pr=true;
+else{
+
+let max=Math.max(...previous.map(e=>e.weight));
+if(weight>max) pr=true;
+
+}
+
+data.push({
+exercise,
+weight:Number(weight),
+reps:Number(reps),
+date:new Date().toISOString()
+});
+
+saveData();
+
+renderEntries();
+
+updateExerciseList();
+
+document.getElementById("exerciseInput").value="";
+document.getElementById("weightInput").value="";
+document.getElementById("repsInput").value="";
+
+}
+
+function renderEntries(){
+
+entriesDiv.innerHTML="";
+
+let recent=data.slice(-5).reverse();
+
+recent.forEach(e=>{
+
+let div=document.createElement("div");
+div.className="entry";
+
+let previous=data.filter(x=>x.exercise==e.exercise && x!==e);
+
+let prText="";
+
+if(previous.length==0 || e.weight>Math.max(...previous.map(x=>x.weight)))
+prText='<div class="pr">🏆 NEW PR</div>';
+
+div.innerHTML=
+`<b>${e.exercise}</b><br>
+${e.weight} kg • ${e.reps} reps
+${prText}`;
+
+entriesDiv.appendChild(div);
+
+});
+
+}
+
+let chart;
+
+function showGraph(){
+
+let exercise=graphExercise.value;
+
+let filtered=data.filter(e=>e.exercise==exercise);
+
+let labels=filtered.map(e=>new Date(e.date).toLocaleDateString());
+let weights=filtered.map(e=>e.weight);
+
+if(chart) chart.destroy();
+
+chart=new Chart(document.getElementById("chart"),{
+
+type:"line",
+
+data:{
+labels:labels,
+datasets:[{
+label:exercise+" kg",
+data:weights,
+fill:false,
+tension:0.3
+}]
+}
+
+});
+
+}
+
+updateExerciseList();
+renderEntries();
+
+</script>
+
+</body>
+</html>

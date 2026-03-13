@@ -55,10 +55,6 @@ font-size:16px;
 cursor:pointer;
 }
 
-button:hover{
-background:#16a34a;
-}
-
 .secondary{
 background:#3b82f6;
 margin-top:8px;
@@ -124,9 +120,11 @@ color:#cbd5f5;
 
 <div class="card">
 
-<label>Übung</label>
-<input id="exerciseInput" list="exerciseList">
-<datalist id="exerciseList"></datalist>
+<label>Gespeicherte Übung wählen</label>
+<select id="exerciseSelectInput"></select>
+
+<label>Oder neue Übung eingeben</label>
+<input id="exerciseInput">
 
 <label>Gewicht (kg)</label>
 <input type="number" id="weightInput">
@@ -136,8 +134,6 @@ color:#cbd5f5;
 
 <button onclick="saveEntry()">Speichern</button>
 
-<button class="secondary" onclick="openExerciseManager()">Übungen verwalten</button>
-
 <button class="secondary" onclick="openHistory()">Historie verwalten</button>
 
 </div>
@@ -146,7 +142,7 @@ color:#cbd5f5;
 
 <label>Übung für Fortschritt wählen</label>
 
-<select id="exerciseSelect"></select>
+<select id="exerciseSelectGraph"></select>
 
 <button onclick="showProgress()">Fortschritt anzeigen</button>
 
@@ -158,8 +154,6 @@ color:#cbd5f5;
 
 </div>
 
-<!-- HISTORY MODAL -->
-
 <div class="modal" id="historyModal">
 
 <div class="modalContent">
@@ -169,22 +163,6 @@ color:#cbd5f5;
 <div id="historyList"></div>
 
 <button onclick="closeHistory()">Schließen</button>
-
-</div>
-
-</div>
-
-<!-- EXERCISE MANAGER -->
-
-<div class="modal" id="exerciseModal">
-
-<div class="modalContent">
-
-<h2>Gespeicherte Übungen</h2>
-
-<div id="exerciseManagerList"></div>
-
-<button onclick="closeExerciseManager()">Schließen</button>
 
 </div>
 
@@ -202,7 +180,11 @@ localStorage.setItem("gymData",JSON.stringify(data))
 
 function saveEntry(){
 
-let exercise=document.getElementById("exerciseInput").value.trim()
+let exerciseInput=document.getElementById("exerciseInput").value.trim()
+let selectValue=document.getElementById("exerciseSelectInput").value
+
+let exercise = exerciseInput || selectValue
+
 let weight=parseFloat(document.getElementById("weightInput").value)
 let reps=parseInt(document.getElementById("repsInput").value)
 
@@ -234,22 +216,25 @@ function updateExerciseLists(){
 
 let exercises=[...new Set(data.map(e=>e.exercise))]
 
-let datalist=document.getElementById("exerciseList")
-let select=document.getElementById("exerciseSelect")
+let selectInput=document.getElementById("exerciseSelectInput")
+let selectGraph=document.getElementById("exerciseSelectGraph")
 
-datalist.innerHTML=""
-select.innerHTML=""
+selectInput.innerHTML="<option value=''>---</option>"
+selectGraph.innerHTML=""
 
 exercises.forEach(ex=>{
 
 let option=document.createElement("option")
 option.value=ex
-datalist.appendChild(option)
+option.textContent=ex
+
+selectInput.appendChild(option)
 
 let option2=document.createElement("option")
 option2.value=ex
 option2.textContent=ex
-select.appendChild(option2)
+
+selectGraph.appendChild(option2)
 
 })
 
@@ -257,7 +242,7 @@ select.appendChild(option2)
 
 function showProgress(){
 
-let exercise=document.getElementById("exerciseSelect").value
+let exercise=document.getElementById("exerciseSelectGraph").value
 
 let filtered=data.filter(e=>e.exercise===exercise)
 
@@ -287,10 +272,6 @@ data:oneRM,
 borderWidth:3
 }
 ]
-},
-
-options:{
-responsive:true
 }
 
 })
@@ -345,52 +326,6 @@ saveLocal()
 openHistory()
 
 updateExerciseLists()
-
-}
-
-function openExerciseManager(){
-
-let list=document.getElementById("exerciseManagerList")
-
-let exercises=[...new Set(data.map(e=>e.exercise))]
-
-list.innerHTML=""
-
-exercises.forEach(ex=>{
-
-let div=document.createElement("div")
-
-div.className="entry"
-
-div.innerHTML=`
-
-<div>${ex}</div>
-
-<button class="deleteBtn" onclick="deleteExercise('${ex}')">X</button>
-
-`
-
-list.appendChild(div)
-
-})
-
-document.getElementById("exerciseModal").style.display="flex"
-
-}
-
-function closeExerciseManager(){
-document.getElementById("exerciseModal").style.display="none"
-}
-
-function deleteExercise(name){
-
-data=data.filter(e=>e.exercise!==name)
-
-saveLocal()
-
-updateExerciseLists()
-
-openExerciseManager()
 
 }
 

@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Gym Tracker</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -41,6 +40,7 @@ margin-top:8px;
 margin-bottom:12px;
 border-radius:8px;
 border:none;
+box-sizing:border-box;
 }
 
 button{
@@ -59,9 +59,9 @@ button:hover{
 background:#16a34a;
 }
 
-.historyBtn{
-margin-top:10px;
+.secondary{
 background:#3b82f6;
+margin-top:8px;
 }
 
 canvas{
@@ -85,7 +85,7 @@ align-items:center;
 background:#1e293b;
 padding:20px;
 width:90%;
-max-width:400px;
+max-width:420px;
 max-height:80vh;
 overflow:auto;
 border-radius:12px;
@@ -126,7 +126,6 @@ color:#cbd5f5;
 
 <label>Übung</label>
 <input id="exerciseInput" list="exerciseList">
-
 <datalist id="exerciseList"></datalist>
 
 <label>Gewicht (kg)</label>
@@ -137,7 +136,9 @@ color:#cbd5f5;
 
 <button onclick="saveEntry()">Speichern</button>
 
-<button class="historyBtn" onclick="openHistory()">Historie verwalten</button>
+<button class="secondary" onclick="openExerciseManager()">Übungen verwalten</button>
+
+<button class="secondary" onclick="openHistory()">Historie verwalten</button>
 
 </div>
 
@@ -157,6 +158,8 @@ color:#cbd5f5;
 
 </div>
 
+<!-- HISTORY MODAL -->
+
 <div class="modal" id="historyModal">
 
 <div class="modalContent">
@@ -166,6 +169,22 @@ color:#cbd5f5;
 <div id="historyList"></div>
 
 <button onclick="closeHistory()">Schließen</button>
+
+</div>
+
+</div>
+
+<!-- EXERCISE MANAGER -->
+
+<div class="modal" id="exerciseModal">
+
+<div class="modalContent">
+
+<h2>Gespeicherte Übungen</h2>
+
+<div id="exerciseManagerList"></div>
+
+<button onclick="closeExerciseManager()">Schließen</button>
 
 </div>
 
@@ -183,7 +202,7 @@ localStorage.setItem("gymData",JSON.stringify(data))
 
 function saveEntry(){
 
-let exercise=document.getElementById("exerciseInput").value
+let exercise=document.getElementById("exerciseInput").value.trim()
 let weight=parseFloat(document.getElementById("weightInput").value)
 let reps=parseInt(document.getElementById("repsInput").value)
 
@@ -326,6 +345,52 @@ saveLocal()
 openHistory()
 
 updateExerciseLists()
+
+}
+
+function openExerciseManager(){
+
+let list=document.getElementById("exerciseManagerList")
+
+let exercises=[...new Set(data.map(e=>e.exercise))]
+
+list.innerHTML=""
+
+exercises.forEach(ex=>{
+
+let div=document.createElement("div")
+
+div.className="entry"
+
+div.innerHTML=`
+
+<div>${ex}</div>
+
+<button class="deleteBtn" onclick="deleteExercise('${ex}')">X</button>
+
+`
+
+list.appendChild(div)
+
+})
+
+document.getElementById("exerciseModal").style.display="flex"
+
+}
+
+function closeExerciseManager(){
+document.getElementById("exerciseModal").style.display="none"
+}
+
+function deleteExercise(name){
+
+data=data.filter(e=>e.exercise!==name)
+
+saveLocal()
+
+updateExerciseLists()
+
+openExerciseManager()
 
 }
 
